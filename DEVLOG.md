@@ -1,5 +1,13 @@
 # readme-radar Dev Log
 
+## v0.1.1 - UX polish
+
+- Normalized compact and full output layout
+- Removed redundant "README missing" status line
+- Added spacing between summary and results
+- Removed experimental language detection
+- Updated README to match current functionality
+
 ## v0.1
 
 Initial release of readme-radar CLI tool.
