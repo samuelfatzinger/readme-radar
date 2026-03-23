@@ -106,7 +106,6 @@ Top issues:
    - Missing Installation section
    - Missing Usage section
 ```
-```
 
 ## Why This Exists
 
