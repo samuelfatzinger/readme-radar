@@ -78,7 +78,7 @@ Save JSON:
 python readme_radar.py "python cli" --json results.json
 ```
 
-### Example
+## Example
 
 compact output recommended:
 
