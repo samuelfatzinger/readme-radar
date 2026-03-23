@@ -1,7 +1,9 @@
-# readme-radar Dev Log
+# Changelog
+
+All notable changes to readme-radar will be documented in this file.
 
 ## v0.1.1 - UX polish
-
+### Changed
 - Normalized compact and full output layout
 - Removed redundant "README missing" status line
 - Added spacing between summary and results
