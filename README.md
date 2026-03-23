@@ -110,3 +110,7 @@ Top issues:
 ## Why This Exists
 
 Many open source projects lack clear README documentation. readme-radar helps surface repositories where documentation improvements can have the most impact.
+
+## License
+
+MIT License. See LICENSE file for details.
