@@ -21,11 +21,14 @@ def get_query_and_limit() -> tuple[str, int]:
         query = sys.argv[1]
 
     if len(sys.argv) > 2:
-        try:
-            limit = int(sys.argv[2])
-        except ValueError:
-            print("Error: limit must be an integer.")
-            sys.exit(1)
+        possible_limit = sys.argv[2]
+
+        if not possible_limit.startswith("--"):
+            try:
+                limit = int(possible_limit)
+            except ValueError:
+                print("Error: limit must be an integer.")
+                sys.exit(1)
 
     if limit < 1:
         print("Error: limit must be at least 1.")
@@ -135,27 +138,6 @@ def analyze_readme(readme_text: str) -> dict:
     }
 
 
-def detect_language_flag(readme_text: str) -> str:
-    text_lower = readme_text.lower()
-
-    english_markers = [
-        " the ",
-        " and ",
-        " install",
-        " usage",
-        " project",
-        " this ",
-        " license",
-        " contributing",
-    ]
-
-    for marker in english_markers:
-        if marker in text_lower:
-            return "English"
-
-    return "Non-English"
-
-
 def get_severity(score: int) -> str:
     if score >= 75:
         return "Very Weak"
@@ -191,13 +173,12 @@ def build_results(repos: list, headers: dict) -> tuple[list, int]:
 
         if readme_status == "found":
             analysis = analyze_readme(readme_text)
-            language_flag = detect_language_flag(readme_text)
+
             results.append({
                 "name": full_name,
                 "url": repo["html_url"],
                 "stars": repo["stargazers_count"],
                 "description": repo["description"],
-                "language_flag": language_flag,
                 "readme_status": "found",
                 "word_count": analysis["word_count"],
                 "heading_count": analysis["heading_count"],
@@ -210,7 +191,6 @@ def build_results(repos: list, headers: dict) -> tuple[list, int]:
                 "url": repo["html_url"],
                 "stars": repo["stargazers_count"],
                 "description": repo["description"],
-                "language_flag": "Unknown",
                 "readme_status": readme_status,
                 "word_count": None,
                 "heading_count": None,
@@ -275,32 +255,37 @@ def print_ranked_results(results: list) -> None:
         return
 
     for rank, result in enumerate(results, 1):
-        print(f"{rank}. {result['candidate']} | {result['name']} | stars: {result['stars']} | score: {result['score']}")
-
         top_reason = result["reasons"][0]
-        print(f"top issue: {top_reason}")
-        print(f"candidate page: {result['url']}")
-        print()
 
-        if result["language_flag"] == "Non-English":
-            print("[Non-English README]")
+        print(
+            f"{rank}. {result['candidate']} | "
+            f"{result['name']} | "
+            f"stars: {result['stars']} | "
+            f"score: {result['score']} | "
+            f"{top_reason}"
+        )
+
+        print(f"   {result['url']}")
+
+        if result["readme_status"] != "missing" and result["readme_status"] != "found":
+            print(f"   status: {result['readme_status']}")
 
         if result["description"]:
-            print(result["description"])
-
-        if result["readme_status"] != "found":
-            print(f"readme status: {result['readme_status']}")
+            print(f"   description: {result['description']}")
 
         if result["word_count"] is not None:
-            print(f"Word count: {result['word_count']}")
-            print(f"Heading count: {result['heading_count']}")
+            print(f"   word count: {result['word_count']}")
+            print(f"   heading count: {result['heading_count']}")
 
-        print(f"severity: {result['severity']}")
+        print(f"   severity: {result['severity']}")
+        print("   other issues:")
 
-        for reason in result["reasons"]:
-            print(f"- {reason}")
+        if len(result["reasons"]) == 1:
+            print("   - no additional issues")
+        else:
+            for reason in result["reasons"][1:]:
+                print(f"   - {reason}")
 
-        print("-" * 40)
         print()
 
 
@@ -347,6 +332,10 @@ def print_ranked_results_compact(results: list) -> None:
         )
 
         print(f"   {result['url']}")
+
+        if result["readme_status"] != "missing" and result["readme_status"] != "found":
+            print(f"   status: {result['readme_status']}")
+
         print("   other issues:")
 
         if len(result["reasons"]) == 1:
@@ -368,12 +357,7 @@ def main() -> None:
     repos = fetch_repositories(query, limit, headers)
     results, total_scanned = build_results(repos, headers)
 
-    results.sort(
-        key=lambda x: (
-            x["language_flag"] == "Non-English",
-            -x["score"]
-        )
-    )
+    results.sort(key=lambda x: -x["score"])
 
     shown_results = filter_display_results(results)
 
@@ -392,6 +376,7 @@ def main() -> None:
             print(json.dumps(shown_results, indent=2))
     else:
         print_summary(query, total_scanned, results, shown_results)
+        print()
         
         if compact:
             print_ranked_results_compact(shown_results)
