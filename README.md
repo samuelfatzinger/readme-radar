@@ -78,14 +78,34 @@ Save JSON:
 python readme_radar.py "python cli" --json results.json
 ```
 
-## Example Output
+### Example
+
+compact output recommended:
+
+```bash
+python readme_radar.py "python cli" --show 1 --compact
+```
 
 ```
+readme-radar
+============
+Query: python cli
+Scanned: 30
+Flagged: 5
+Shown: 1
+Strong candidates: 1
+Good candidates: 0
+
+Top issues:
+2 - README under 100 words
+1 - Missing README
+
 1. STRONG CANDIDATE | user/repo | stars: 12 | score: 92 | README under 100 words
    https://github.com/user/repo
    other issues:
    - Missing Installation section
    - Missing Usage section
+```
 ```
 
 ## Why This Exists
