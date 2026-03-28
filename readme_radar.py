@@ -257,15 +257,18 @@ def print_ranked_results(results: list) -> None:
     for rank, result in enumerate(results, 1):
         top_reason = result["reasons"][0]
 
+        candidate = f"{result['candidate']:<18}"
+
         print(
-            f"{rank}. {result['candidate']} | "
+            f"{rank}. {candidate} | "
             f"{result['name']} | "
             f"stars: {result['stars']} | "
-            f"score: {result['score']} | "
-            f"{top_reason}"
+            f"score: {result['score']} "
         )
+        print(f"   top issue: {top_reason}")
 
-        print(f"   {result['url']}")
+        print(f"   url: {result['url']}")
+        print()
 
         if result["readme_status"] != "missing" and result["readme_status"] != "found":
             print(f"   status: {result['readme_status']}")
@@ -323,15 +326,18 @@ def print_ranked_results_compact(results: list) -> None:
     for rank, result in enumerate(results, 1):
         top_reason = result["reasons"][0]
 
+        candidate = f"{result['candidate']:<18}"
+
         print(
-            f"{rank}. {result['candidate']} | "
+            f"{rank}. {candidate} | "
             f"{result['name']} | "
             f"stars: {result['stars']} | "
-            f"score: {result['score']} | "
-            f"{top_reason}"
+            f"score: {result['score']} "
         )
+        print(f"   top issue: {top_reason}")
 
-        print(f"   {result['url']}")
+        print(f"   url: {result['url']}")
+        print()
 
         if result["readme_status"] != "missing" and result["readme_status"] != "found":
             print(f"   status: {result['readme_status']}")
