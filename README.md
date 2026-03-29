@@ -78,21 +78,49 @@ Save JSON:
 python readme_radar.py "python cli" --json results.json
 ```
 
+### Pagination
+
+You can start scanning from a later GitHub results page:
+
+```bash
+python readme_radar.py "python cli" 100 --start-page 3
+```
+
+## Options
+
+`--show N`  
+Limit the number of displayed results.
+
+`--compact`  
+Show condensed output.
+
+`--json`  
+Output results as JSON.
+
+`--json filename.json`  
+Save results to a JSON file.
+
+`--start-page N`  
+Begin GitHub search from a specific results page.
+
 ## Example
 
 compact output recommended:
 
 ```bash
-python readme_radar.py "python cli" --show 1 --compact
+python readme_radar.py "python cli" 100 --start-page 3 --compact --show 1
 ```
 
 ```
 readme-radar
 ============
 Query: python cli
-Scanned: 30
-Flagged: 5
+Fetched: 100
+Skipped: 19
+Analyzed: 81
+Flagged: 75
 Shown: 1
+Start page: 3
 Strong candidates: 1
 Good candidates: 0
 
