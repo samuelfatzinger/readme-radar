@@ -13,9 +13,10 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 SEARCH_URL = "https://api.github.com/search/repositories"
 
 
-def get_query_and_limit() -> tuple[str, int]:
+def get_query_and_limit() -> tuple[str, int, int]:
     query = "language:python stars:10..50"
     limit = 20
+    start_page = 1
 
     if len(sys.argv) > 1:
         query = sys.argv[1]
@@ -30,6 +31,15 @@ def get_query_and_limit() -> tuple[str, int]:
                 print("Error: limit must be an integer.")
                 sys.exit(1)
 
+    if "--start-page" in sys.argv:
+        idx = sys.argv.index("--start-page")
+        if len(sys.argv) > idx + 1:
+            try:
+                start_page = int(sys.argv[idx + 1])
+            except ValueError:
+                print("Error: --start-page must be an integer.")
+                sys.exit(1)
+
     if limit < 1:
         print("Error: limit must be at least 1.")
         sys.exit(1)
@@ -38,7 +48,7 @@ def get_query_and_limit() -> tuple[str, int]:
         print("Error: limit cannot exceed 100.")
         sys.exit(1)
 
-    return query, limit
+    return query, limit, start_page
 
 
 def get_headers() -> dict:
@@ -52,23 +62,40 @@ def get_headers() -> dict:
     }
 
 
-def fetch_repositories(query: str, limit: int, headers: dict) -> list:
-    params = {
-        "q": query,
-        "sort": "stars",
-        "order": "asc",
-        "per_page": limit,
-    }
+def fetch_repositories(query: str, limit: int, headers: dict, start_page: int = 1) -> list:
+    results = []
+    page = start_page
+    per_page = 100
 
-    response = requests.get(SEARCH_URL, headers=headers, params=params, timeout=20)
 
-    if response.status_code != 200:
-        print(f"Error: GitHub search failed ({response.status_code})")
-        print(response.text)
-        sys.exit(1)
+    target = max(limit, 100)
 
-    data = response.json()
-    return data.get("items", [])
+    while len(results) < target:
+        params = {
+            "q": query,
+            "sort": "stars",
+            "order": "asc",
+            "per_page": per_page,
+            "page": page,
+        }
+
+        response = requests.get(SEARCH_URL, headers=headers, params=params, timeout=20)
+
+        if response.status_code != 200:
+            print(f"Error: GitHub search failed ({response.status_code})")
+            print(response.text)
+            sys.exit(1)
+
+        data = response.json()
+        items = data.get("items", [])
+
+        if not items:
+            break
+
+        results.extend(items)
+        page += 1
+
+    return results[:limit]
 
 
 def fetch_readme(owner: str, name: str, headers: dict) -> tuple[str | None, str]:
@@ -161,13 +188,27 @@ def get_candidate_label(severity: str) -> str:
 def build_results(repos: list, headers: dict) -> tuple[list, int]:
     results = []
     total_scanned = 0
+    seen = set()
 
     for repo in repos:
+        
+        if repo.get("archived"):
+            continue
+
+        if repo.get("disabled"):
+            continue
+
+        full_name = repo["full_name"]
+
+        if full_name in seen:
+            continue
+
+        seen.add(full_name)
+
         total_scanned += 1
 
         owner = repo["owner"]["login"]
         name = repo["name"]
-        full_name = f"{owner}/{name}"
 
         readme_status, readme_text = fetch_readme(owner, name, headers)
 
@@ -219,7 +260,12 @@ def filter_display_results(results: list) -> list:
     return display_results
 
 
-def print_summary(query: str, total_scanned: int, results: list, shown_results: list) -> None:
+def print_summary(query: str, 
+                  total_scanned: int, 
+                  results: list, 
+                  shown_results: list, 
+                  start_page: int, 
+                  fetched_count: int) -> None:
     strong_count = sum(1 for r in shown_results if r["candidate"] == "STRONG CANDIDATE")
     good_count = sum(1 for r in shown_results if r["candidate"] == "GOOD CANDIDATE")
 
@@ -227,9 +273,21 @@ def print_summary(query: str, total_scanned: int, results: list, shown_results: 
     print("readme-radar")
     print("============")
     print(f"Query: {query}")
-    print(f"Scanned: {total_scanned}")
-    print(f"Flagged: {len(results)}")
+    print(f"Fetched: {fetched_count}")
+
+    skipped_count = fetched_count - total_scanned
+    print(f"Skipped: {skipped_count}")
+
+    print(f"Analyzed: {total_scanned}")
+
+    flagged_count = len([
+        r for r in results
+        if get_candidate_label(get_severity(r["score"])) != "Skip"
+    ])
+
+    print(f"Flagged: {flagged_count}")
     print(f"Shown: {len(shown_results)}")
+    print(f"Start page: {start_page}")
     print(f"Strong candidates: {strong_count}")
     print(f"Good candidates: {good_count}")
     print()
@@ -257,18 +315,15 @@ def print_ranked_results(results: list) -> None:
     for rank, result in enumerate(results, 1):
         top_reason = result["reasons"][0]
 
-        candidate = f"{result['candidate']:<18}"
-
         print(
-            f"{rank}. {candidate} | "
+            f"{rank}. {result['candidate']} | "
             f"{result['name']} | "
             f"stars: {result['stars']} | "
-            f"score: {result['score']} "
+            f"score: {result['score']} | "
+            f"{top_reason}"
         )
-        print(f"   top issue: {top_reason}")
 
-        print(f"   url: {result['url']}")
-        print()
+        print(f"   {result['url']}")
 
         if result["readme_status"] != "missing" and result["readme_status"] != "found":
             print(f"   status: {result['readme_status']}")
@@ -326,18 +381,15 @@ def print_ranked_results_compact(results: list) -> None:
     for rank, result in enumerate(results, 1):
         top_reason = result["reasons"][0]
 
-        candidate = f"{result['candidate']:<18}"
-
         print(
-            f"{rank}. {candidate} | "
+            f"{rank}. {result['candidate']} | "
             f"{result['name']} | "
             f"stars: {result['stars']} | "
-            f"score: {result['score']} "
+            f"score: {result['score']} | "
+            f"{top_reason}"
         )
-        print(f"   top issue: {top_reason}")
 
-        print(f"   url: {result['url']}")
-        print()
+        print(f"   {result['url']}")
 
         if result["readme_status"] != "missing" and result["readme_status"] != "found":
             print(f"   status: {result['readme_status']}")
@@ -354,13 +406,14 @@ def print_ranked_results_compact(results: list) -> None:
 
 
 def main() -> None:
-    query, limit = get_query_and_limit()
+    query, limit, start_page = get_query_and_limit()
     show_limit = get_show_limit()
     compact = is_compact_mode()
     headers = get_headers()
     json_output = "--json" in sys.argv
 
-    repos = fetch_repositories(query, limit, headers)
+    repos = fetch_repositories(query, limit, headers, start_page)
+    fetched_count = len(repos)
     results, total_scanned = build_results(repos, headers)
 
     results.sort(key=lambda x: -x["score"])
@@ -381,7 +434,7 @@ def main() -> None:
         else:
             print(json.dumps(shown_results, indent=2))
     else:
-        print_summary(query, total_scanned, results, shown_results)
+        print_summary(query, total_scanned, results, shown_results, start_page, fetched_count)
         print()
         
         if compact:
