@@ -39,7 +39,7 @@ All notable changes to readme-radar will be documented in this file.
 
 ## v0.1
 
-Initial release of readme-radar CLI tool.
+### Initial release of readme-radar CLI tool.
 
 Features:
 - GitHub repository search
