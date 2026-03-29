@@ -2,7 +2,7 @@
 
 All notable changes to readme-radar will be documented in this file.
 
-## [v0.1.1]
+## v0.1.1
 
 ### Added
 - GitHub search pagination to fetch multiple result pages instead of only the first page.
