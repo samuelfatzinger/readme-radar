@@ -2,6 +2,19 @@
 
 All notable changes to readme-radar will be documented in this file.
 
+## v0.1.3
+
+### Added
+- Repository activity metadata displayed in results:
+  - Last updated time (e.g., “3 days ago”)
+  - Repository creation year
+  - Activity indicator based on last 90 days (`active (90d): yes/no`)
+- Human-readable time formatting for repository update timestamps.
+
+### Changed
+- Enhanced result output with a secondary metadata line for better evaluation of repository relevance.
+- Compact mode now includes a minimal activity signal (`active: y/n`) without full metadata to preserve readability.
+
 ## v0.1.2
 
 ### Added

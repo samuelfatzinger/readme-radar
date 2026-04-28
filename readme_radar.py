@@ -3,6 +3,7 @@ import sys
 import base64
 
 import json
+from unittest import result
 
 import requests
 from dotenv import load_dotenv
@@ -225,6 +226,8 @@ def build_results(repos: list, headers: dict) -> tuple[list, int]:
                 "heading_count": analysis["heading_count"],
                 "score": analysis["score"],
                 "reasons": analysis["reasons"],
+                "updated_at": repo.get("updated_at"),
+                "created_at": repo.get("created_at"),
             })
         else:
             results.append({
@@ -237,6 +240,8 @@ def build_results(repos: list, headers: dict) -> tuple[list, int]:
                 "heading_count": None,
                 "score": 100,
                 "reasons": ["Missing README"] if readme_status == "missing" else ["README fetch failed"],
+                "updated_at": repo.get("updated_at"),
+                "created_at": repo.get("created_at"),
             })
 
     return results, total_scanned
@@ -258,6 +263,42 @@ def filter_display_results(results: list) -> list:
         display_results.append(enriched)
 
     return display_results
+
+from datetime import datetime, timezone
+
+def format_time_ago(iso_str: str) -> str:
+    if not iso_str:
+        return "unknown"
+
+    dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+    now = datetime.now(timezone.utc)
+    delta = now - dt
+
+    days = delta.days
+
+    if days < 1:
+        return "today"
+    if days == 1:
+        return "1 day ago"
+    if days < 30:
+        return f"{days} days ago"
+    if days < 365:
+        months = days // 30
+        return f"{months} month{'s' if months > 1 else ''} ago"
+
+    years = days // 365
+    return f"{years} year{'s' if years > 1 else ''} ago"
+
+
+def is_active(iso_str: str) -> str:
+    if not iso_str:
+        return "unknown"
+
+    dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+    now = datetime.now(timezone.utc)
+    days = (now - dt).days
+
+    return "yes" if days <= 90 else "no"
 
 
 def print_summary(query: str, 
@@ -324,6 +365,16 @@ def print_ranked_results(results: list) -> None:
         )
 
         print(f"   {result['url']}")
+        updated = format_time_ago(result.get("updated_at"))
+        created_raw = result.get("created_at")
+
+        created_year = "unknown"
+        if created_raw:
+            created_year = created_raw[:4]
+
+        active = is_active(result.get("updated_at"))
+
+        print(f"   updated: {updated} | created: {created_year} | active (90d): {active}")
 
         if result["readme_status"] != "missing" and result["readme_status"] != "found":
             print(f"   status: {result['readme_status']}")
@@ -380,12 +431,14 @@ def print_ranked_results_compact(results: list) -> None:
 
     for rank, result in enumerate(results, 1):
         top_reason = result["reasons"][0]
+        active = is_active(result.get("updated_at"))
 
         print(
             f"{rank}. {result['candidate']} | "
             f"{result['name']} | "
             f"stars: {result['stars']} | "
             f"score: {result['score']} | "
+            f"active: {'y' if active == 'yes' else 'n'} | "
             f"{top_reason}"
         )
 
