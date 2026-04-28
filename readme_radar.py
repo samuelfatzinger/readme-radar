@@ -309,6 +309,10 @@ def print_summary(query: str,
                   fetched_count: int) -> None:
     strong_count = sum(1 for r in shown_results if r["candidate"] == "STRONG CANDIDATE")
     good_count = sum(1 for r in shown_results if r["candidate"] == "GOOD CANDIDATE")
+    active_count = sum(
+        1 for r in shown_results
+        if is_active(r.get("updated_at")) == "yes"
+    )
 
     print()
     print("readme-radar")
@@ -331,6 +335,7 @@ def print_summary(query: str,
     print(f"Start page: {start_page}")
     print(f"Strong candidates: {strong_count}")
     print(f"Good candidates: {good_count}")
+    print(f"Active (90d): {active_count}")
     print()
 
     issue_counts = {}

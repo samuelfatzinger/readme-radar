@@ -16,6 +16,7 @@ readme-radar searches GitHub repositories, analyzes README quality, and ranks pr
 - Compact output mode
 - JSON export
 - Top issue summary
+- - Repository activity metadata (last updated, creation year, active status)
 
 ## Setup
 
@@ -123,12 +124,13 @@ Shown: 1
 Start page: 3
 Strong candidates: 1
 Good candidates: 0
+Active (90d): 1
 
 Top issues:
 2 - README under 100 words
 1 - Missing README
 
-1. STRONG CANDIDATE | user/repo | stars: 12 | score: 92 | README under 100 words
+1. STRONG CANDIDATE | user/repo | stars: 12 | score: 92 | active: y | README under 100 words
    https://github.com/user/repo
    other issues:
    - Missing Installation section
